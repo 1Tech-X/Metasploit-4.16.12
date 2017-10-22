@@ -1,62 +1,29 @@
 #!/data/data/com.termux/files/usr/bin/bash
-echo "##############################################"
-echo " SUBSCRIBE MY CHANNEL Tech-X "
-echo "##############################################"
 
-echo "WAIT UNTIL INSTALLING............" 
+msfvar=4.16.12
 
-echo "####################################"
- pkg install autoconf bison clang coreutils curl findutils git apr apr-util libffi-dev libgmp-dev libpcap-dev \
+apt update
+apt install -y autoconf bison clang coreutils toilet curl findutils git apr apr-util libffi-dev libgmp-dev libpcap-dev \
     postgresql-dev readline-dev libsqlite-dev openssl-dev libtool libxml2-dev libxslt-dev ncurses-dev pkg-config \
-    postgresql-contrib wget make ruby-dev libgrpc-dev termux-tools ncurses ncurses-utils libsodium-dev -y
-echo "####################################"
-echo "Downloading & Extracting....."
+    postgresql-contrib wget make ruby-dev libgrpc-dev termux-tools ncurses-utils ncurses unzip zip tar postgresql termux-elf-cleaner
 
-curl -L https://github.com/rapid7/metasploit-framework/archive/4.16.2.tar.gz | tar xz
-
-
-cd metasploit-framework-4.16.2
-
-sed 's|git ls-files|find -type f|' -i metasploit-framework.gemspec
-
-
-
-
-sed 's/rb-readline  (0.5.5)/rb-readline /g' -i Gemfile.lock
-sed 's/rb-readline/rb-readline (= 0.5.5)/g' -i Gemfile.lock 
-
-gem unpack rbnacl-libsodium -v'1.0.13'
-cd rbnacl-libsodium-1.0.13
-termux-fix-shebang ./vendor/libsodium/configure ./vendor/libsodium/build-aux/*
-sed 's|">= 3.0.1"|"~> 3.0", ">= 3.0.1"|g' -i rbnacl-libsodium.gemspec
-sed 's|">= 10"|"~> 10"|g' -i rbnacl-libsodium.gemspec
-#Install bundler
-echo "Bundler is installing"
+cd $HOME
+curl -LO https://github.com/rapid7/metasploit-framework/archive/$msfvar.tar.gz
+tar -xf $HOME/$msfvar.tar.gz
+mv $HOME/metasploit-framework-$msfvar $HOME/metasploit-framework
+cd $HOME/metasploit-framework
+sed '/rbnacl/d' -i Gemfile.lock
+sed '/rbnacl/d' -i metasploit-framework.gemspec
 gem install bundler
+sed 's|nokogiri (1.*)|nokogiri (1.8.0)|g' -i Gemfile.lock
 
-
-gem unpack rbnacl-libsodium -v'1.0.13'
-cd rbnacl-libsodium-1.0.13
-termux-fix-shebang ./vendor/libsodium/configure ./vendor/libsodium/build-aux/*
-sed 's|">= 3.0.1"|"~> 3.0", ">= 3.0.1"|g' -i rbnacl-libsodium.gemspec
-sed 's|">= 10"|"~> 10"|g' -i rbnacl-libsodium.gemspec
-
-curl -LO https://Auxilus.github.io/configure.patch
-patch ./vendor/libsodium/configure < configure.patch
-
-gem build rbnacl-libsodium.gemspec
-gem install rbnacl-libsodium-1.0.13.gem
-cd .. 
-rm -rf rbnacl-libsodium-1.0.13
-sed 's|nokogiri (*|nokogiri (1.8.0)|g' -i Gemfile.lock  
 gem install nokogiri -v'1.8.0' -- --use-system-libraries
-#Install Network-Interface
-
+ 
 sed 's|grpc (.*|grpc (1.4.1)|g' -i $HOME/metasploit-framework/Gemfile.lock
 gem unpack grpc -v 1.4.1
 cd grpc-1.4.1
 curl -LO https://raw.githubusercontent.com/grpc/grpc/v1.4.1/grpc.gemspec
-curl -L https://wiki.termux.com/images/b/bf/Grpc_extconf.patch -o extconf.patch
+curl -L https://raw.githubusercontent.com/Auxilus/Auxilus.github.io/master/Grpc_extconf.patch -o extconf.patch
 patch -p1 < extconf.patch
 gem build grpc.gemspec
 gem install grpc-1.4.1.gem
@@ -64,38 +31,31 @@ cd ..
 rm -r grpc-1.4.1
 
 
-#Install gems
-gem unpack grpc -v 1.4.1
-cd grpc-1.4.1
-curl -LO https://raw.githubusercontent.com/grpc/grpc/v1.4.1/grpc.gemspec
-curl -L https://wiki.termux.com/images/b/bf/Grpc_extconf.patch -o extconf.patch
-patch -p1 < extconf.patch
-gem build grpc.gemspec
-echo "grpc is installing"
-gem install grpc-1.4.1.gem
-cd ..
-rm -r grpc-1.4.1
-
-#Bundle Install
-echo "bundle and all other dependencies are installing......"
+cd $HOME/metasploit-framework
 bundle install -j5
 
-#Fixing Shebang
+echo "Gems installed"
 $PREFIX/bin/find -type f -executable -exec termux-fix-shebang \{\} \;
+rm ./modules/auxiliary/gather/http_pdf_authors.rb
+ln -s $HOME/metasploit-framework/msfconsole /data/data/com.termux/files/usr/bin/
+ln -s $HOME/metasploit-framework/msfvenom /data/data/com.termux/files/usr/bin/
 
-cd metasploit-framework-4.16.2
+termux-elf-cleaner /data/data/com.termux/files/usr/lib/ruby/gems/2.4.0/gems/pg-0.20.0/lib/pg_ext.so
+echo "Creating database"
 
-echo "###############################"
-echo "Thanx  To  Vishalbiswani"
-echo "###############################"
+cd $HOME/metasploit-framework/config
+curl -LO https://Auxilus.github.io/database.yml
 
-echo "###############################################"
-echo "Subscribe  My  Channel  To  Motivate  My  Work"
-echo "###############################################"
-echo "###############################"
-echo "For  More. Tricks. Visit  At  Tech-X "
-echo "###############################"
-echo "####################################"
-echo " NOW YOU CAN LAUNCH METASPLOIT BY JUST EXECUTE THE COMMAND :=>  ./msfconsole"
-echo "####################################"
-exec bash
+mkdir -p $PREFIX/var/lib/postgresql
+initdb $PREFIX/var/lib/postgresql
+
+pg_ctl -D $PREFIX/var/lib/postgresql start
+createuser msf
+createdb msf_database
+
+
+
+echo "you can directly use msfvenom or msfconsole rather than ./msfvenom or ./msfconsole as they are symlinked to $PREFIX/bin""
+toilet -f term -F border --gay "Metasploit-Framework-4.16.12"
+toilet -f mono12 -F border "Subcribe"
+toilet -f mono12 -F border --gay "Tech-x"
