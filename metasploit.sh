@@ -56,6 +56,6 @@ createdb msf_database
 
 
 echo "you can directly use msfvenom or msfconsole rather than ./msfvenom or ./msfconsole as they are symlinked to $PREFIX/bin""
-toilet -f term -F border --gay "Metasploit-Framework-4.16.12"
-toilet -f mono12 -F border "Subcribe"
-toilet -f mono12 -F border --gay "Tech-x"
+toilet -f term -F border"Metasploit-Framework-4.16.12"
+toilet -f mono12 -F border"Subcribe"
+toilet -f mono12 -F border"Tech-x"
